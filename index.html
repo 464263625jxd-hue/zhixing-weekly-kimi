@@ -2,30 +2,19 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>知行周刊 · 数字化知识库</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
     <style>
-        body { font-family: 'Noto Sans SC', sans-serif; background-color: #f1f5f9; color: #0f172a; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
-        html { -webkit-overflow-scrolling: touch; }
-        .serif { font-family: 'Noto Serif SC', serif; }
+        body { font-family: 'Noto Sans SC', sans-serif; }
         [x-cloak] { display: none !important; }
-        .portal-bg { background-color: #0f172a; background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%); min-height: 100vh; }
-        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
-        .hl-data { color: #b45309; font-weight: 800; background-color: rgba(251, 191, 36, 0.15); padding: 0 4px; border-radius: 2px; }
-        @media (max-width: 640px) { .modal-content { height: 100vh; height: 100dvh; max-height: 100dvh; border-radius: 0; } }
-        nav { padding-top: env(safe-area-inset-top); }
+        .card-hover { transition: all 0.3s; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .float { animation: float 3s ease-in-out infinite; }
     </style>
     <script>
         tailwind.config = {
@@ -33,85 +22,48 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: { dark: '#0B1120', primary: '#003366', accent: '#F59E0B', light: '#3B82F6', soft: '#F8FAFC' }
+                        brand: { primary: '#003366', accent: '#F59E0B', light: '#3B82F6' }
                     }
                 }
             }
         }
     </script>
     <script>
-        let GLOBAL_ISSUE_DB = [];
-        function platformApp() {
+        function app() {
             return {
-                // 核心状态
                 isLoading: true,
                 loadError: false,
-                view: 'portal',
                 issueDB: [],
                 companyDB: {},
-                currentIssueId: null,
-                currentIssueData: null,
-                currentIndustry: null,
-                currentCategory: '美妆',
-                activeTab: 'home',
-                subFilter: 'all',
+                currentIssue: null,
                 searchQuery: '',
-                selectedNews: null,
-                displayLimit: 30,
                 darkMode: false,
-                showGlobalSearch: false,
-                globalSearchQuery: '',
-                selectedCompany: null,
-                
-                // 行业配置
-                sectorConfig: {
-                    '宏观': { color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', gradient: 'from-slate-700 to-slate-900' },
-                    '平台': { color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200', gradient: 'from-sky-600 to-blue-800' },
-                    '美妆': { color: 'text-pink-600', bg: 'bg-pink-50', border: 'border-pink-200', gradient: 'from-pink-500 to-rose-700' },
-                    '食品饮料': { color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', gradient: 'from-orange-500 to-amber-700' },
-                    '母婴': { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200', gradient: 'from-rose-400 to-red-600' },
-                    '宠物': { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', gradient: 'from-emerald-500 to-teal-700' }
-                },
-                
-                // 导航标签
                 tabs: [
-                    { id: 'home', name: '本期概览' },
-                    { id: 'all', name: '全部资讯' },
-                    { id: '宏观', name: '宏观经济' },
-                    { id: '平台', name: '平台动态' },
-                    { id: '美妆', name: '美妆护肤' },
-                    { id: '食品饮料', name: '食品饮料' },
-                    { id: '母婴', name: '母婴亲子' },
-                    { id: '宠物', name: '宠物经济' }
+                    { id: 'home', name: '🏠 本期概览' },
+                    { id: 'all', name: '📰 全部资讯' },
+                    { id: '宏观', name: '📊 宏观经济' },
+                    { id: '平台', name: '🌐 平台动态' },
+                    { id: '美妆', name: '💄 美妆护肤' },
+                    { id: '食品饮料', name: '🍔 食品饮料' },
+                    { id: '母婴', name: '👶 母婴亲子' },
+                    { id: '宠物', name: '🐾 宠物经济' }
                 ],
-                
-                // 初始化
                 async init() {
                     try {
-                        console.log('🚀 开始加载知行周刊数据...');
                         const response = await fetch('data.json');
                         if (!response.ok) throw new Error('HTTP ' + response.status);
                         const data = await response.json();
-                        if (!data.issues || data.issues.length === 0) throw new Error('数据为空');
-                        this.issueDB = data.issues;
+                        this.issueDB = data.issues || [];
                         this.companyDB = data.companies || {};
-                        GLOBAL_ISSUE_DB = this.issueDB;
-                        console.log('✅ 数据加载成功:', this.issueDB.length, '期周刊');
-                        console.log('📊 公司数据:', Object.keys(this.companyDB).length, '个行业');
                         this.isLoading = false;
                         this.checkDarkMode();
                     } catch (error) {
-                        console.error('❌ 数据加载失败:', error);
-                        this.errorMessage = '数据加载失败：' + error.message;
                         this.loadError = true;
                         this.isLoading = false;
                     }
                 },
-                
-                // 深色模式
                 checkDarkMode() {
-                    const saved = localStorage.getItem('darkMode');
-                    if (saved === 'true') {
+                    if (localStorage.getItem('darkMode') === 'true') {
                         this.darkMode = true;
                         document.documentElement.classList.add('dark');
                     }
@@ -119,455 +71,132 @@
                 toggleDarkMode() {
                     this.darkMode = !this.darkMode;
                     localStorage.setItem('darkMode', this.darkMode);
-                    document.documentElement.classList.toggle('dark', this.darkMode);
-                },
-                
-                // 导航方法 - 修复按钮跳转
-                goHome() {
-                    this.view = 'portal';
-                    this.currentIssueId = null;
-                    this.currentIssueData = null;
-                    this.currentIndustry = null;
-                    this.activeTab = 'home';
-                    this.subFilter = 'all';
-                    this.searchQuery = '';
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                },
-                
-                selectIssue(issueId) {
-                    this.currentIssueId = issueId;
-                    this.currentIssueData = this.issueDB.find(i => i.id === issueId);
-                    if (this.currentIssueData) {
-                        this.view = 'reader';
-                        this.activeTab = 'home';
-                        this.subFilter = 'all';
-                        this.searchQuery = '';
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
                     }
                 },
-                
-                openIndustry(category) {
-                    this.currentIndustry = category;
-                    this.view = 'industry';
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                openIssue(id) {
+                    this.currentIssue = this.issueDB.find(i => i.id === id);
                 },
-                
-                openCorporate(category) {
-                    this.currentCategory = category;
-                    this.view = 'corporate';
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                goHome() {
+                    this.currentIssue = null;
                 },
-                
-                selectCompany(company) {
-                    this.selectedCompany = company;
-                },
-                
-                selectNews(news) {
-                    this.selectedNews = news;
-                },
-                
-                // 计算属性
                 get filteredNews() {
-                    if (!this.currentIssueData || !this.currentIssueData.data) return [];
-                    let news = this.currentIssueData.data;
-                    if (this.subFilter !== 'all') news = news.filter(n => n.category === this.subFilter);
+                    if (!this.currentIssue || !this.currentIssue.data) return [];
+                    let news = this.currentIssue.data;
                     if (this.searchQuery && this.searchQuery.trim()) {
                         const q = this.searchQuery.toLowerCase().trim();
-                        news = news.filter(n => (n.title && n.title.toLowerCase().includes(q)) || (n.content && n.content.toLowerCase().includes(q)));
+                        news = news.filter(n => n.title?.toLowerCase().includes(q) || n.content?.toLowerCase().includes(q));
                     }
                     return news;
                 },
-                
-                get industryTimeline() {
-                    if (!this.currentIndustry) return [];
-                    return this.issueDB.map(issue => {
-                        const news = issue.data ? issue.data.filter(item => item.category === this.currentIndustry) : [];
-                        const insight = issue.insight ? issue.insight[this.currentIndustry] : null;
-                        if (news.length === 0 && !insight) return null;
-                        return { issueId: issue.id, date: issue.date, insight: insight, news: news };
-                    }).filter(item => item !== null);
-                },
-                
-                get currentCompanies() {
-                    return this.companyDB[this.currentCategory] || [];
-                },
-                
-                // 功能方法
                 exportData() {
                     try {
-                        const blob = new Blob([JSON.stringify(this.issueDB, null, 2)], { type: 'application/json' });
+                        const jsonString = JSON.stringify(this.issueDB, null, 2);
+                        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), ...jsonString.split('').map(c => new Uint8Array([c.charCodeAt(0)]))], { type: 'application/json;charset=utf-8' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'zhixing-weekly-data.json';
+                        a.download = '知行周刊数据.json';
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
-                        alert('数据导出成功！');
+                        alert('✅ 数据导出成功！');
                     } catch (error) {
                         console.error('导出失败:', error);
-                        alert('导出失败：' + error.message);
+                        alert('❌ 导出失败：' + error.message);
                     }
-                },
-                
-                shareIssue(title, url) {
-                    if (navigator.share) {
-                        navigator.share({ title: title, url: url }).catch(() => this.copyToClipboard(url));
-                    } else {
-                        this.copyToClipboard(url);
-                    }
-                },
-                
-                copyToClipboard(text) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        alert('链接已复制到剪贴板！');
-                    }).catch(err => {
-                        console.error('复制失败:', err);
-                        prompt('请手动复制以下链接:', text);
-                    });
-                },
-                
-                formatContent(text) {
-                    if (!text) return '';
-                    let cleanText = text.replace(/\*\*/g, '');
-                    return cleanText.replace(/(\d+(?:\.\d+)?(?:万 | 亿 | 亿元 | 美元|%)|202\d 年\d+ 月|TOP\d+)/g, '<span class="hl-data">$1</span>');
                 }
             }
         }
     </script>
 </head>
-<body x-data="platformApp()" x-init="init()" :class="darkMode ? 'dark bg-gray-900' : 'bg-gray-50'" class="transition-colors duration-500 antialiased">
-    <!-- Loading -->
-    <div x-show="isLoading" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-900">
+<body x-data="app()" x-init="init()" :class="darkMode ? 'dark bg-black text-white' : 'bg-white text-gray-900'" class="transition-colors duration-300">
+    <div x-show="isLoading" x-cloak class="h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-900">
         <div class="text-center text-white">
-            <div class="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-lg flex items-center justify-center border border-white/30 shadow-2xl mb-6 animate-bounce">
-                <span class="text-5xl">📊</span>
-            </div>
+            <div class="float text-6xl mb-4">📊</div>
             <p class="text-xl font-bold">正在加载知行周刊数据...</p>
-            <p class="text-sm mt-2 opacity-75">首次加载可能需要 10-30 秒</p>
         </div>
     </div>
-
-    <!-- Error -->
-    <div x-show="loadError" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-red-600 via-red-700 to-red-900">
-        <div class="bg-white rounded-3xl p-10 max-w-md text-center shadow-2xl mx-4">
+    <div x-show="loadError" x-cloak class="h-screen flex items-center justify-center bg-gradient-to-br from-red-600 via-red-700 to-red-900">
+        <div class="bg-white rounded-3xl p-10 max-w-md text-center shadow-2xl">
             <div class="text-6xl mb-4">⚠️</div>
             <h2 class="text-2xl font-black text-gray-900 mb-4">加载失败</h2>
             <p class="text-gray-600 mb-6" x-text="errorMessage"></p>
             <button @click="location.reload()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-full font-bold hover:shadow-xl transform hover:scale-105 transition-all">🔄 刷新页面</button>
         </div>
     </div>
-
-    <!-- Main Content -->
-    <div x-show="!isLoading && !loadError" x-cloak>
-        <!-- Portal View -->
-        <div x-show="view === 'portal'" class="min-h-screen portal-bg pb-12">
-            <!-- Navigation -->
-            <nav class="bg-brand-dark/90 text-white shadow-lg sticky top-0 z-50 backdrop-blur-md border-b border-white/10">
-                <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-brand-accent rounded-lg flex items-center justify-center text-brand-dark font-black text-lg shadow-lg">Z</div>
-                        <span class="font-bold text-xl tracking-wide">知行数字化知识库</span>
+    <div x-show="!isLoading && !loadError" x-cloak class="min-h-screen">
+        <header class="sticky top-0 z-50" :class="darkMode ? 'bg-gray-900/95 border-gray-800' : 'bg-white/95 border-gray-200'" class="backdrop-blur-sm border-b">
+            <div class="max-w-6xl mx-auto px-4 py-3">
+                <div class="flex justify-between items-center">
+                    <div @click="goHome()" class="flex items-center space-x-2 cursor-pointer">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-2xl">📊</div>
+                        <div>
+                            <h1 class="text-xl font-black gradient-text">知行周刊</h1>
+                            <p class="text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-500'">数字化知识库</p>
+                        </div>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <button @click="showGlobalSearch = true" class="text-gray-300 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        </button>
-                        <button @click="toggleDarkMode()" class="text-gray-300 hover:text-white transition-colors p-2">
+                    <div class="flex items-center space-x-2">
+                        <button @click="toggleDarkMode()" class="p-2 rounded-lg transition-all" :class="darkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" title="切换深色模式">
                             <span class="text-xl" x-text="darkMode ? '☀️' : '🌙'"></span>
                         </button>
-                        <button @click="exportData()" class="text-gray-300 hover:text-white transition-colors p-2">
+                        <button @click="exportData()" class="p-2 rounded-lg transition-all" :class="darkMode ? 'bg-gray-800 text-blue-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" title="导出数据">
                             <span class="text-xl">💾</span>
                         </button>
                     </div>
                 </div>
-            </nav>
-
-            <!-- Hero Section -->
-            <main class="max-w-7xl mx-auto px-4 py-10">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-16 items-start">
-                    <!-- Latest Issue -->
-                    <div class="relative group cursor-pointer" @click="selectIssue(issueDB[0]?.id)">
-                        <div class="absolute -inset-1 bg-gradient-to-r from-brand-accent via-brand-light to-brand-accent rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 animate-pulse"></div>
-                        <div class="relative h-full bg-slate-900 rounded-2xl overflow-hidden ring-1 ring-white/10">
-                            <div class="h-64 sm:h-80 overflow-hidden relative">
-                                <img :src="issueDB[0]?.coverImage" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                                <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
-                                <div class="absolute top-4 left-4">
-                                    <span class="bg-brand-accent text-brand-dark text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg">No.<span x-text="issueDB[0]?.id"></span></span>
-                                </div>
-                            </div>
-                            <div class="p-8">
-                                <div class="text-brand-light font-mono text-sm mb-2" x-text="issueDB[0]?.date"></div>
-                                <h2 class="text-3xl font-black text-white mb-4 leading-tight" x-text="issueDB[0]?.title"></h2>
-                                <p class="text-gray-400 text-lg mb-6 line-clamp-3" x-text="issueDB[0]?.summary"></p>
-                                <div class="flex flex-wrap gap-2 mb-6">
-                                    <template x-for="tag in issueDB[0]?.tags">
-                                        <span class="text-xs text-slate-300 bg-white/10 px-2 py-1 rounded border border-white/5" x-text="'#'+tag"></span>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Access -->
-                    <div class="space-y-10">
-                        <!-- Industry Access -->
-                        <div>
-                            <h3 class="text-xl font-bold text-white border-b border-white/10 pb-4 mb-4">📊 行业直通车</h3>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                <template x-for="(config, cat) in sectorConfig">
-                                    <div @click="openIndustry(cat)" class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-white/5 rounded-xl p-4 flex items-center justify-between group transition-all">
-                                        <span class="text-white font-bold" x-text="cat"></span>
-                                        <div :class="`w-8 h-8 rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg group-hover:scale-110`">
-                                            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <!-- Corporate Radar -->
-                        <div>
-                            <h3 class="text-xl font-bold text-brand-accent border-b border-white/10 pb-4 mb-4">🏢 名企雷达</h3>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                <template x-for="cat in ['美妆', '个护家清', '食品饮料', '母婴', '宠物']">
-                                    <div @click="openCorporate(cat)" class="cursor-pointer bg-gradient-to-br from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 border border-white/10 rounded-xl p-4 flex items-center justify-between group transition-all">
-                                        <span class="text-gray-200 font-bold" x-text="cat + '名企'"></span>
-                                        <svg class="w-5 h-5 text-brand-accent group-hover:scale-125 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Archive -->
-                <div>
-                    <h3 class="text-xl font-bold text-white border-b border-white/10 pb-4 mb-4">📚 往期回顾</h3>
-                    <div class="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
-                        <template x-for="issue in issueDB.slice(1)" :key="issue.id">
-                            <div @click="selectIssue(issue.id)" class="bg-slate-800/50 rounded-xl p-4 flex gap-4 border border-white/5 hover:border-brand-accent/50 hover:bg-slate-800 transition-all cursor-pointer group">
-                                <div class="w-20 h-20 rounded-lg overflow-hidden shrink-0">
-                                    <img :src="issue.coverImage" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-80 group-hover:opacity-100">
-                                </div>
-                                <div class="flex-1 min-w-0 flex flex-col justify-center">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="text-xs font-mono text-gray-500">No.<span x-text="issue.id"></span></span>
-                                        <span class="text-[10px] text-gray-600 border border-gray-700 px-1.5 rounded" x-text="issue.date"></span>
-                                    </div>
-                                    <h4 class="text-white font-bold mb-1 line-clamp-1 group-hover:text-brand-light" x-text="issue.title"></h4>
-                                    <p class="text-xs text-gray-500 line-clamp-1" x-text="issue.summary"></p>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </main>
-        </div>
-
-        <!-- Reader View -->
-        <div x-show="view === 'reader'" class="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <!-- Reader Nav -->
-            <nav class="bg-brand-dark text-white sticky top-0 z-40 shadow-md">
-                <div class="max-w-7xl mx-auto px-4 py-3">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center cursor-pointer" @click="goHome()">
-                            <div class="bg-white/10 hover:bg-brand-accent hover:text-brand-dark p-2 rounded-lg transition-all mr-3">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                            </div>
-                            <div>
-                                <h1 class="text-lg font-bold">知行周刊 <span class="text-brand-accent">No.<span x-text="currentIssueData?.id"></span></span></h1>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-4">
-                            <button @click="toggleDarkMode()" class="text-gray-300 hover:text-white p-2">
-                                <span class="text-xl" x-text="darkMode ? '☀️' : '🌙'"></span>
-                            </button>
-                            <button @click="exportData()" class="text-gray-300 hover:text-white p-2">
-                                <span class="text-xl">💾</span>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- Tabs -->
-                    <div class="flex overflow-x-auto space-x-1 pb-2">
-                        <template x-for="tab in tabs" :key="tab.id">
-                            <button @click="activeTab = tab.id"
-                                :class="activeTab === tab.id ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'"
-                                class="px-3 py-1.5 rounded text-xs font-bold transition-colors whitespace-nowrap"
-                                x-text="tab.name"></button>
-                        </template>
-                    </div>
-                </div>
-            </nav>
-
-            <!-- Reader Content -->
-            <main class="max-w-7xl mx-auto px-4 py-6">
-                <!-- Search -->
-                <div class="mb-6">
-                    <input type="text" x-model="searchQuery" placeholder="🔍 搜索本期资讯..." class="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-brand-primary">
-                </div>
-
-                <!-- News List -->
-                <div class="space-y-4">
-                    <template x-for="news in filteredNews" :key="news.title">
-                        <div @click="selectNews(news)" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all border border-gray-100 dark:border-gray-700">
-                            <div class="flex items-center gap-3 mb-3">
-                                <span class="text-xs font-bold px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" x-text="news.category"></span>
-                                <span class="text-xs font-bold px-3 py-1 rounded-full border border-brand-primary/20 bg-brand-primary/10 text-brand-primary" x-text="news.subCategory"></span>
-                                <span x-show="news.isAlert" class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                            </div>
-                            <h4 class="text-xl font-black text-gray-900 dark:text-white mb-3" x-text="news.title"></h4>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed line-clamp-3" x-text="(news.content || '').substring(0, 200) + '...'"></p>
-                        </div>
+                <div class="flex overflow-x-auto space-x-2 mt-3 pb-2">
+                    <template x-for="tab in tabs">
+                        <button @click="openIssue(issueDB[0]?.id)" 
+                            :class="darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                            class="px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all" x-text="tab.name"></button>
                     </template>
-                </div>
-            </main>
-        </div>
-
-        <!-- Industry View -->
-        <div x-show="view === 'industry'" class="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <nav class="bg-brand-dark text-white sticky top-0 z-40 shadow-md">
-                <div class="max-w-7xl mx-auto px-4 py-3">
-                    <div class="flex items-center">
-                        <button @click="goHome()" class="bg-white/10 hover:bg-brand-accent hover:text-brand-dark p-2 rounded-lg transition-all mr-3">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                        </button>
-                        <h1 class="text-xl font-bold">📊 <span x-text="currentIndustry"></span>时间轴</h1>
-                    </div>
-                </div>
-            </nav>
-            <main class="max-w-7xl mx-auto px-4 py-6">
-                <div class="space-y-6">
-                    <template x-for="item in industryTimeline" :key="item.issueId">
-                        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-sm font-mono text-brand-primary" x-text="item.date"></span>
-                                <button @click="selectIssue(item.issueId)" class="text-xs text-brand-accent hover:underline">查看完整期数 →</button>
-                            </div>
-                            <div x-show="item.insight" class="mb-4 p-4 bg-brand-primary/5 dark:bg-brand-primary/10 rounded-xl">
-                                <h4 class="font-bold text-brand-primary mb-2" x-text="item.insight?.title"></h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400" x-text="item.insight?.content"></p>
-                            </div>
-                            <div class="space-y-2">
-                                <template x-for="news in item.news">
-                                    <div @click="selectNews(news)" class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                        <h5 class="font-bold text-gray-900 dark:text-white" x-text="news.title"></h5>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </main>
-        </div>
-
-        <!-- Corporate View -->
-        <div x-show="view === 'corporate'" class="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <nav class="bg-brand-dark text-white sticky top-0 z-40 shadow-md">
-                <div class="max-w-7xl mx-auto px-4 py-3">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <button @click="goHome()" class="bg-white/10 hover:bg-brand-accent hover:text-brand-dark p-2 rounded-lg transition-all mr-3">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                            </button>
-                            <h1 class="text-xl font-bold">🏢 <span x-text="currentCategory"></span>名企</h1>
-                        </div>
-                        <div class="flex space-x-2">
-                            <template x-for="cat in ['美妆', '个护家清', '食品饮料', '母婴', '宠物']">
-                                <button @click="currentCategory = cat" :class="currentCategory === cat ? 'bg-brand-accent text-brand-dark' : 'bg-white/10 text-white'" class="px-3 py-1 rounded text-xs font-bold transition-colors" x-text="cat"></button>
-                            </template>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-            <main class="max-w-7xl mx-auto px-4 py-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <template x-for="company in currentCompanies" :key="company.name">
-                        <div @click="selectCompany(company)" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all border border-gray-100 dark:border-gray-700">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center text-white font-black text-lg">
-                                    <span x-text="company.name.charAt(0)"></span>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-gray-900 dark:text-white" x-text="company.name"></h3>
-                                    <p class="text-xs text-gray-500" x-text="company.code"></p>
-                                </div>
-                            </div>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2" x-text="company.desc"></p>
-                            <div class="flex gap-2">
-                                <a :href="company.site" target="_blank" class="text-xs text-brand-primary hover:underline">官网</a>
-                                <a :href="company.ir" target="_blank" class="text-xs text-brand-primary hover:underline">投资者关系</a>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </main>
-        </div>
-
-        <!-- Detail Modal -->
-        <div x-show="selectedNews" x-cloak class="fixed inset-0 z-50 flex justify-center items-end sm:items-center" @click="selectedNews = null">
-            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
-            <div class="modal-content relative bg-white dark:bg-gray-800 w-full sm:max-w-3xl sm:rounded-3xl h-[90vh] sm:h-auto sm:max-h-[80vh] flex flex-col shadow-2xl overflow-hidden" @click.stop>
-                <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-brand-primary to-brand-accent">
-                    <div class="flex gap-2 items-center">
-                        <span class="text-xs font-black bg-white/20 text-white px-3 py-1 rounded-full" x-text="selectedNews?.category"></span>
-                        <span class="text-xs font-bold text-white/80" x-text="selectedNews?.subCategory"></span>
-                    </div>
-                    <button @click="selectedNews = null" class="p-2 bg-white/20 rounded-full hover:bg-white/30 text-white transition-colors">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
-                <div class="p-8 overflow-y-auto">
-                    <h2 class="text-3xl font-black text-gray-900 dark:text-white mb-6" x-text="selectedNews?.title"></h2>
-                    <div class="flex items-center space-x-4 text-xs text-gray-400 mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
-                        <span>来源：知行周刊整理</span>
-                        <span x-text="'Issue No.' + (currentIssueData?.id || '')"></span>
-                    </div>
-                    <div class="text-gray-700 dark:text-gray-300 text-lg leading-relaxed" x-html="formatContent(selectedNews?.content)"></div>
                 </div>
             </div>
-        </div>
-
-        <!-- Company Modal -->
-        <div x-show="selectedCompany" x-cloak class="fixed inset-0 z-50 flex justify-center items-end sm:items-center" @click="selectedCompany = null">
-            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
-            <div class="modal-content relative bg-white dark:bg-gray-800 w-full sm:max-w-2xl sm:rounded-3xl h-[80vh] sm:h-auto sm:max-h-[80vh] flex flex-col shadow-2xl overflow-hidden" @click.stop>
-                <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-brand-primary to-brand-accent">
-                    <h3 class="text-xl font-black text-white" x-text="selectedCompany?.name"></h3>
-                    <button @click="selectedCompany = null" class="p-2 bg-white/20 rounded-full hover:bg-white/30 text-white transition-colors">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
-                <div class="p-8 overflow-y-auto">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center text-white font-black text-2xl">
-                            <span x-text="selectedCompany?.name?.charAt(0)"></span>
+        </header>
+        <main class="max-w-6xl mx-auto px-4 py-6">
+            <div x-show="!currentIssue" class="space-y-6">
+                <template x-for="issue in issueDB" :key="issue.id">
+                    <div @click="openIssue(issue.id)" class="card-hover bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden cursor-pointer border dark:border-gray-700">
+                        <div class="h-48 bg-cover bg-center relative" :style="'background-image: url(' + issue.coverImage + ')'">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white">
+                                <span class="bg-brand-accent text-brand-dark text-xs font-black px-3 py-1 rounded-full" x-text="'No.' + issue.id"></span>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="text-2xl font-black text-gray-900 dark:text-white" x-text="selectedCompany?.name"></h4>
-                            <p class="text-sm text-gray-500" x-text="selectedCompany?.code"></p>
+                        <div class="p-6">
+                            <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'" x-text="issue.date"></p>
+                            <h3 class="text-2xl font-black mt-2 mb-3" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="issue.title"></h3>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2" x-text="issue.summary"></p>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="tag in issue.tags">
+                                    <span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-bold" x-text="'#' + tag"></span>
+                                </template>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-gray-700 dark:text-gray-300 text-lg leading-relaxed mb-6" x-text="selectedCompany?.desc"></p>
-                    <div class="space-y-3">
-                        <a :href="selectedCompany?.site" target="_blank" class="block p-4 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-gray-900 dark:text-white">官方网站</span>
-                                <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                            </div>
-                        </a>
-                        <a :href="selectedCompany?.ir" target="_blank" class="block p-4 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-gray-900 dark:text-white">投资者关系</span>
-                                <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                            </div>
-                        </a>
-                    </div>
-                </div>
+                </template>
             </div>
-        </div>
+            <div x-show="currentIssue" class="space-y-4">
+                <button @click="goHome()" class="mb-4 px-4 py-2 rounded-lg font-bold transition-all" :class="darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">← 返回首页</button>
+                <div class="mb-4">
+                    <input x-model="searchQuery" :placeholder="darkMode ? '🔍 搜索资讯...' : '🔍 搜索资讯...'" class="w-full px-4 py-3 rounded-xl outline-none transition-all" :class="darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-2 focus:ring-indigo-500' : 'bg-white text-gray-900 border-gray-200 focus:ring-2 focus:ring-indigo-500 border'">
+                </div>
+                <template x-for="news in filteredNews" :key="news.title">
+                    <div class="card-hover bg-white dark:bg-gray-800 rounded-xl shadow p-4 cursor-pointer border dark:border-gray-700">
+                        <div class="flex gap-2 mb-2">
+                            <span class="text-xs px-2 py-1 rounded" :class="darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'" x-text="news.category"></span>
+                            <span class="text-xs px-2 py-1 rounded border border-indigo-500/20 bg-indigo-500/10 text-indigo-600" x-text="news.subCategory"></span>
+                        </div>
+                        <h4 class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="news.title"></h4>
+                    </div>
+                </template>
+            </div>
+        </main>
     </div>
 </body>
 </html>
